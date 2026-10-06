@@ -3,6 +3,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Trivia Diaria</title>
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
+<script src="https://sad.adsgram.ai/js/sad.min.js"></script>
 <style>
 body{font-family:sans-serif;background:#12161f;color:#fff;padding:16px;max-width:480px;margin:auto}
 button{width:100%;padding:14px;margin:6px 0;border:0;border-radius:10px;font-size:16px;background:#243049;color:#fff}
@@ -14,8 +15,7 @@ button{width:100%;padding:14px;margin:6px 0;border:0;border-radius:10px;font-siz
 <div id="ops"></div>
 <button class="sec" id="pista" onclick="pista()">💡 Pista (ver anuncio)</button>
 <script>
-const tg = window.Telegram && Telegram.WebApp;
-if (tg) { tg.ready(); tg.expand(); }
+const BLOCK_ID = "52202";
 const TODAS = [
  {"p":"¿Cuál es la capital de Australia?","o":["Sídney","Melbourne","Canberra","Perth"],"c":2},
  {"p":"¿Cuál es el planeta más grande del sistema solar?","o":["Saturno","Júpiter","Neptuno","Tierra"],"c":1},
@@ -27,26 +27,34 @@ const TODAS = [
  {"p":"¿Cuál es el símbolo químico del oro?","o":["Ag","Fe","Au","Or"],"c":2},
  {"p":"¿Cuál es el país más grande de Sudamérica?","o":["Argentina","Brasil","Perú","Colombia"],"c":1},
  {"p":"¿Cuántos jugadores juegan por equipo en la cancha en fútbol?","o":["9","10","11","12"],"c":2}
-]
-;
+];
+const tg = window.Telegram && Telegram.WebApp;
+if (tg) { tg.ready(); tg.expand(); }
+const enTelegram = !!(tg && tg.initData);
+const AdController = (enTelegram && window.Adsgram) ? window.Adsgram.init({ blockId: BLOCK_ID }) : null;
 let preguntas = [], i = 0, puntos = 0, bloqueado = false, duplicado = false;
-let racha = +(localStorage.getItem("racha") || 0);
+let racha = 0;
+try { racha = +(localStorage.getItem("racha") || 0); } catch (e) {}
 
 function verAnuncio(alTerminar) {
-  // Aquí irá el código de la red de anuncios (Adsgram, Monetag, etc.)
-  alert("Aquí se mostraría un anuncio");
-  alTerminar();
+  if (!enTelegram) { alert("Anuncio de prueba (fuera de Telegram)"); alTerminar(); return; }
+  if (!AdController) { alert("Los anuncios no están disponibles ahora."); return; }
+  AdController.show().then(function () { alTerminar(); }).catch(function () {
+    alert("No hay anuncio disponible ahora. Intenta de nuevo en un momento.");
+  });
 }
 function actualizarRacha() {
-  const hoy = new Date().toDateString();
-  const ayer = new Date(Date.now() - 864e5).toDateString();
-  const ultima = localStorage.getItem("ultima");
-  if (ultima === hoy) return;
-  racha = ultima === ayer ? racha + 1 : 1;
-  localStorage.setItem("racha", racha);
-  localStorage.setItem("ultima", hoy);
+  try {
+    const hoy = new Date().toDateString();
+    const ayer = new Date(Date.now() - 864e5).toDateString();
+    const ultima = localStorage.getItem("ultima");
+    if (ultima === hoy) return;
+    racha = ultima === ayer ? racha + 1 : 1;
+    localStorage.setItem("racha", racha);
+    localStorage.setItem("ultima", hoy);
+  } catch (e) {}
 }
-async function iniciar() {
+function iniciar() {
   preguntas = [...TODAS].sort(() => Math.random() - 0.5).slice(0, 10);
   i = 0; puntos = 0; duplicado = false;
   mostrar();

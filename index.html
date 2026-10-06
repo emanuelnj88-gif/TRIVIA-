@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="es"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Trivia Diaria</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<style>
+body{font-family:sans-serif;background:#12161f;color:#fff;padding:16px;max-width:480px;margin:auto}
+button{width:100%;padding:14px;margin:6px 0;border:0;border-radius:10px;font-size:16px;background:#243049;color:#fff}
+.ok{background:#1f8a4c}.mal{background:#b3363f}.sec{background:#3b4a6b}
+#top{display:flex;justify-content:space-between;opacity:.8}
+</style></head><body>
+<div id="top"><span id="prog"></span><span id="racha"></span></div>
+<h2 id="preg"></h2>
+<div id="ops"></div>
+<button class="sec" id="pista" onclick="pista()">💡 Pista (ver anuncio)</button>
+<script>
+const tg = window.Telegram && Telegram.WebApp;
+if (tg) { tg.ready(); tg.expand(); }
+const TODAS = [
+ {"p":"¿Cuál es la capital de Australia?","o":["Sídney","Melbourne","Canberra","Perth"],"c":2},
+ {"p":"¿Cuál es el planeta más grande del sistema solar?","o":["Saturno","Júpiter","Neptuno","Tierra"],"c":1},
+ {"p":"¿Quién pintó la Mona Lisa?","o":["Picasso","Van Gogh","Leonardo da Vinci","Miguel Ángel"],"c":2},
+ {"p":"¿Cuántos huesos tiene el cuerpo humano adulto?","o":["106","206","306","256"],"c":1},
+ {"p":"¿Cuál es el océano más grande?","o":["Atlántico","Índico","Ártico","Pacífico"],"c":3},
+ {"p":"¿En qué año llegó el ser humano a la Luna?","o":["1959","1969","1979","1989"],"c":1},
+ {"p":"¿Cuál es el río más largo de Venezuela?","o":["Caroní","Apure","Orinoco","Catatumbo"],"c":2},
+ {"p":"¿Cuál es el símbolo químico del oro?","o":["Ag","Fe","Au","Or"],"c":2},
+ {"p":"¿Cuál es el país más grande de Sudamérica?","o":["Argentina","Brasil","Perú","Colombia"],"c":1},
+ {"p":"¿Cuántos jugadores juegan por equipo en la cancha en fútbol?","o":["9","10","11","12"],"c":2}
+]
+;
+let preguntas = [], i = 0, puntos = 0, bloqueado = false, duplicado = false;
+let racha = +(localStorage.getItem("racha") || 0);
+
+function verAnuncio(alTerminar) {
+  // Aquí irá el código de la red de anuncios (Adsgram, Monetag, etc.)
+  alert("Aquí se mostraría un anuncio");
+  alTerminar();
+}
+function actualizarRacha() {
+  const hoy = new Date().toDateString();
+  const ayer = new Date(Date.now() - 864e5).toDateString();
+  const ultima = localStorage.getItem("ultima");
+  if (ultima === hoy) return;
+  racha = ultima === ayer ? racha + 1 : 1;
+  localStorage.setItem("racha", racha);
+  localStorage.setItem("ultima", hoy);
+}
+async function iniciar() {
+  preguntas = [...TODAS].sort(() => Math.random() - 0.5).slice(0, 10);
+  i = 0; puntos = 0; duplicado = false;
+  mostrar();
+}
+function mostrar() {
+  bloqueado = false;
+  if (i >= preguntas.length) return fin();
+  const q = preguntas[i];
+  document.getElementById("prog").textContent = "Pregunta " + (i + 1) + "/" + preguntas.length;
+  document.getElementById("racha").textContent = "🔥 " + racha + " días";
+  document.getElementById("preg").textContent = q.p;
+  document.getElementById("pista").style.display = "block";
+  const ops = document.getElementById("ops");
+  ops.innerHTML = "";
+  q.o.forEach((t, n) => {
+    const b = document.createElement("button");
+    b.textContent = t;
+    b.onclick = () => responder(n, b);
+    ops.appendChild(b);
+  });
+}
+function responder(n, btn) {
+  if (bloqueado) return;
+  bloqueado = true;
+  const q = preguntas[i];
+  document.querySelectorAll("#ops button")[q.c].classList.add("ok");
+  if (n === q.c) puntos += 10; else btn.classList.add("mal");
+  setTimeout(() => { i++; mostrar(); }, 1000);
+}
+function pista() {
+  if (bloqueado) return;
+  verAnuncio(() => {
+    const q = preguntas[i];
+    const botones = [...document.querySelectorAll("#ops button")];
+    botones.filter((b, n) => n !== q.c).slice(0, 2).forEach(b => b.style.display = "none");
+    document.getElementById("pista").style.display = "none";
+  });
+}
+function duplicar() {
+  verAnuncio(() => { puntos *= 2; duplicado = true; fin(); });
+}
+function fin() {
+  actualizarRacha();
+  document.getElementById("pista").style.display = "none";
+  document.getElementById("racha").textContent = "🔥 " + racha + " días";
+  document.getElementById("prog").textContent = "Terminaste";
+  document.getElementById("preg").textContent = "Hiciste " + puntos + " puntos";
+  document.getElementById("ops").innerHTML =
+    (duplicado ? "" : '<button onclick="duplicar()">✨ Duplicar puntos (ver anuncio)</button>') +
+    '<button class="sec" onclick="iniciar()">Jugar otra vez</button>';
+}
+iniciar();
+</script></body></html>
